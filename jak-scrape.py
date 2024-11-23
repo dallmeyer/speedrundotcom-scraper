@@ -3,15 +3,18 @@ import json
 import math
 import re
 
+# You'll probably get rate-limited if you try to run this for all games at once
+# Comment/uncomment and run just a few games at a time
 games = [
-    "jak1", "jak1ext", "jak1og", "jak1ogext", "Jak_The_Chicken",
-    "jak2", "jak2ext", "jak2og",
-    "jak3", "jak3ext",
+    "jak1", "jak1ext", "jak1og", "jak1ogext",
+    # "Jak_The_Chicken",
+    # "jak2", "jak2ext", "jak2og",
+    # "jak3", "jak3ext",
     # "jakx", "jakxext",
     # "daxter", "daxterext",
     # "jaktlf"
 ]
-check_vars = ["jak1og", "jak1ogext", "Jak_The_Chicken"]
+check_vars = ["jak1ext", "jak1og", "jak1ogext", "Jak_The_Chicken"]
 
 base_url = "https://speedrun.com/api/v1"
 
@@ -78,6 +81,7 @@ for g in games:
                 # no rejected runs
                 if r["status"]["status"] == "rejected":
                     print(f"    Ignoring {runner}\"s rejected run {r["weblink"]}")
+                    continue
 
                 found_run = True
 
@@ -88,7 +92,7 @@ for g in games:
                         vars_tmp = json.loads(resp.text)["data"]
                         variables = dict()
                         for v in vars_tmp:
-                            if re.search("cutscene.*skip", v["name"], re.IGNORECASE) or re.search("flut", v["name"], re.IGNORECASE):
+                            if re.search("NG\\+ Tab", v["name"], re.IGNORECASE) or re.search("cutscene.*skip", v["name"], re.IGNORECASE) or re.search("flut", v["name"], re.IGNORECASE):
                                 # cutscene skip or jak/flut variable, track it
                                 variables[v["id"]] = dict()
                                 for vv in v["values"]["values"]:
