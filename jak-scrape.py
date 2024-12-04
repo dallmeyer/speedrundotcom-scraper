@@ -1,30 +1,80 @@
+from asyncio import sleep
 import requests
 import json
 import math
 import re
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from pynput import keyboard
+
 
 # You'll probably get rate-limited if you try to run this for all games at once
 # Comment/uncomment and run just a few games at a time
 games = [
-    "jak1", "jak1ext", "jak1og", "jak1ogext",
-    # "Jak_The_Chicken",
-    # "jak2", "jak2ext", "jak2og",
-    # "jak3", "jak3ext",
-    # "jakx", "jakxext",
-    # "daxter", "daxterext",
-    # "jaktlf"
+    ["jak1", "jak1ext", "jak1og", "jak1ogext"],
+    ["Jak_The_Chicken"],
+    ["jak2", "jak2ext", "jak2og"],
+    ["jak3", "jak3ext"],
+    ["jakx", "jakxext"],
+    ["daxter", "daxterext"],
+    ["jaktlf"]
 ]
-check_vars = ["jak1ext", "jak1og", "jak1ogext", "Jak_The_Chicken"]
+check_vars = ["jak1ext", "jak1og", "jak1ogext", "Jak_The_Chicken", "jak2ext", "jak3ext"]
+
+_game_idx = 0
+_month = datetime.today().replace(day=1)
+
+def game_selection_handler(key):
+    global _game_idx
+    if key == keyboard.Key.down:
+        _game_idx = (_game_idx + 1) % len(games)
+        print(f"Select game: {games[_game_idx][0]}             ", end='\r', flush=True)
+    elif key == keyboard.Key.up:
+        _game_idx = (_game_idx - 1) % len(games)
+        print(f"Select game: {games[_game_idx][0]}             ", end='\r', flush=True)
+    elif key == keyboard.Key.enter:
+        print()
+        listener.stop()
+    elif key == keyboard.Key.esc:
+        exit(1)
+
+def month_selection_handler(key):
+    global _month
+    if key == keyboard.Key.down:
+        _month = _month + relativedelta(months=1)
+        print(f"Select month: {_month.strftime('%m/%Y')}", end='\r', flush=True)
+    elif key == keyboard.Key.up:
+        _month = _month - relativedelta(months=1)
+        print(f"Select month: {_month.strftime('%m/%Y')}", end='\r', flush=True)
+    elif key == keyboard.Key.enter:
+        print()
+        listener.stop()
+    elif key == keyboard.Key.esc:
+        exit(1)
 
 base_url = "https://speedrun.com/api/v1"
 
-start = input("Enter start date (e.g. 2024-09-30): ")
-end = input("Enter end date (e.g. 2024-11-01): ")
+print(f"Select game: {games[_game_idx][0]}             ", end='\r', flush=True)
+with keyboard.Listener(on_press=game_selection_handler) as listener:
+    listener.join()
+input()
+
+print(f"Select month: {_month.strftime('%m/%Y')}", end='\r', flush=True)
+with keyboard.Listener(on_press=month_selection_handler) as listener:
+    listener.join()
+input()
+
+start_date = _month - relativedelta(days=1)
+start = start_date.strftime('%Y-%m-%d')
+end_date = _month + relativedelta(months=1)
+end = end_date.strftime('%Y-%m-%d')
+
+print(f"Searching for {games[_game_idx][0]} runs between {start} - {end} ...\n")
 
 # remember users to avoid redundant API calls
 users = dict()
 
-for g in games:
+for g in games[_game_idx]:
     found_run = False
     ret = []
     # print(f"Fetching categories for {g}")
@@ -92,7 +142,7 @@ for g in games:
                         vars_tmp = json.loads(resp.text)["data"]
                         variables = dict()
                         for v in vars_tmp:
-                            if re.search("NG\\+ Tab", v["name"], re.IGNORECASE) or re.search("cutscene.*skip", v["name"], re.IGNORECASE) or re.search("flut", v["name"], re.IGNORECASE):
+                            if re.search("NG\\+ Tab", v["name"], re.IGNORECASE) or re.search("cutscene.*skip", v["name"], re.IGNORECASE) or re.search("flut", v["name"], re.IGNORECASE) or re.search("Act", v["name"], re.IGNORECASE) or re.search("File Type", v["name"], re.IGNORECASE):
                                 # cutscene skip or jak/flut variable, track it
                                 variables[v["id"]] = dict()
                                 for vv in v["values"]["values"]:
